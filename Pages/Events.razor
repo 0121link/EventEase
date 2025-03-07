@@ -1,0 +1,83 @@
+@page "/events"
+@using EventEase.Models
+@using EventEase.Services
+@using EventEase.Shared
+@inject EventService EventService
+
+<PageTitle>EventEase - Events</PageTitle>
+
+<div class="container mt-4">
+    <h1>Available Events</h1>
+
+    @if (events == null)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading events...</span>
+            </div>
+        </div>
+    }
+    else if (!events.Any())
+    {
+        <div class="alert alert-info">
+            <p>No events available at the moment.</p>
+            <a href="/create-event" class="btn btn-primary">Create an Event</a>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var evt in events)
+            {
+                <div class="col-md-4 mb-4">
+                    <EventCard Event="evt" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Event> events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create three mock events for initial display
+        events = new List<Event>
+        {
+            new Event
+            {
+                Id = 1,
+                Name = "Tech Conference 2024",
+                Date = new DateTime(2024, 6, 15),
+                Location = "Convention Center",
+                Description = "Annual technology conference featuring the latest innovations",
+                Price = 299.99m,
+                AvailableSpots = 200,
+                Category = "Conference"
+            },
+            new Event
+            {
+                Id = 2,
+                Name = "Summer Music Festival",
+                Date = new DateTime(2024, 7, 20),
+                Location = "Central Park",
+                Description = "Three days of live music and entertainment",
+                Price = 149.99m,
+                AvailableSpots = 500,
+                Category = "Social"
+            },
+            new Event
+            {
+                Id = 3,
+                Name = "Business Networking Dinner",
+                Date = new DateTime(2024, 8, 5),
+                Location = "Grand Hotel",
+                Description = "Networking event for business professionals",
+                Price = 79.99m,
+                AvailableSpots = 100,
+                Category = "Networking"
+            }
+        };
+    }
+} 

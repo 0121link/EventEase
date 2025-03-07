@@ -1,0 +1,252 @@
+@page "/my-attendance"
+@using EventEase.Models
+@using EventEase.Services
+@inject UserSessionService UserSessionService
+@inject AttendanceService AttendanceService
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+@inject ILogger<MyAttendance> Logger
+
+<h3>My Event Attendance</h3>
+
+@if (isLoading)
+{
+    <p>Loading attendance information...</p>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+}
+else if (session == null)
+{
+    <div class="alert alert-info" role="alert">
+        You haven't registered for any events yet.
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">My Registered Events</h5>
+                </div>
+                <div class="card-body">
+                    @if (!registeredEvents.Any())
+                    {
+                        <p>You haven't registered for any events yet.</p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var evt in registeredEvents)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">@evt.Name</h6>
+                                        <small>@evt.Date.ToShortDateString()</small>
+                                    </div>
+                                    <p class="mb-1">@evt.Location</p>
+                                    <small>Status: @GetAttendanceStatus(evt.Id)</small>
+                                    <div class="mt-2">
+                                        <button class="btn btn-danger btn-sm" @onclick="() => ShowUnregisterModal(evt)">
+                                            Unregister
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Attendance History</h5>
+                </div>
+                <div class="card-body">
+                    @if (!attendanceRecords.Any())
+                    {
+                        <p>No attendance records found.</p>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var record in attendanceRecords)
+                            {
+                                @if (eventDetails.TryGetValue(record.EventId, out var evt))
+                                {
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">@evt.Name</h6>
+                                            <small>@record.RegistrationDate.ToShortDateString()</small>
+                                        </div>
+                                        <p class="mb-1">Status: @record.Status</p>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showUnregisterModal)
+{
+    <div class="modal fade show" style="display: block;" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Unregister from Event</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUnregisterModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please enter your password to confirm unregistration from "@selectedEvent?.Name"</p>
+                    <div class="form-group">
+                        <input type="password" class="form-control" @bind="unregisterPassword" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseUnregisterModal">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleUnregister">Confirm Unregister</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private UserSession session;
+    private List<Event> registeredEvents = new();
+    private List<AttendanceRecord> attendanceRecords = new();
+    private Dictionary<int, Event> eventDetails = new();
+    private bool isLoading = true;
+    private string errorMessage;
+    private bool showUnregisterModal;
+    private Event selectedEvent;
+    private string unregisterPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            session = await UserSessionService.GetCurrentSessionAsync();
+            if (session != null)
+            {
+                // Get all registered events
+                foreach (var eventId in session.RegisteredEventIds)
+                {
+                    try
+                    {
+                        var evt = await EventService.GetEventByIdAsync(eventId);
+                        if (evt != null)
+                        {
+                            registeredEvents.Add(evt);
+                        }
+                    }
+                    catch (EventNotFoundException)
+                    {
+                        // Event no longer exists, remove it from user's registered events
+                        session.RegisteredEventIds.Remove(eventId);
+                        await UserSessionService.SetCurrentSessionAsync(session);
+                    }
+                }
+
+                // Get attendance records
+                attendanceRecords = await AttendanceService.GetUserAttendanceAsync(session.UserId);
+
+                // Pre-fetch event details for attendance records
+                foreach (var record in attendanceRecords)
+                {
+                    if (!eventDetails.ContainsKey(record.EventId))
+                    {
+                        try
+                        {
+                            var evt = await EventService.GetEventByIdAsync(record.EventId);
+                            if (evt != null)
+                            {
+                                eventDetails[record.EventId] = evt;
+                            }
+                        }
+                        catch (EventNotFoundException)
+                        {
+                            // Event no longer exists, skip it
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading attendance information");
+            errorMessage = "An error occurred while loading your attendance information.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetAttendanceStatus(int eventId)
+    {
+        var record = attendanceRecords.FirstOrDefault(r => r.EventId == eventId);
+        return record?.Status.ToString() ?? "Registered";
+    }
+
+    private void ShowUnregisterModal(Event evt)
+    {
+        selectedEvent = evt;
+        showUnregisterModal = true;
+        unregisterPassword = string.Empty;
+    }
+
+    private void CloseUnregisterModal()
+    {
+        showUnregisterModal = false;
+        selectedEvent = null;
+        unregisterPassword = string.Empty;
+    }
+
+    private async Task HandleUnregister()
+    {
+        if (selectedEvent == null || string.IsNullOrEmpty(unregisterPassword))
+        {
+            errorMessage = "Please enter your password to unregister.";
+            return;
+        }
+
+        try
+        {
+            // Verify password (you should implement proper password verification)
+            if (unregisterPassword != session.Password) // This is a simplified check
+            {
+                errorMessage = "Invalid password. Please try again.";
+                return;
+            }
+
+            // Unregister from the event
+            await AttendanceService.UnregisterAttendanceAsync(selectedEvent.Id, session.UserId);
+            
+            // Update the UI
+            registeredEvents.Remove(selectedEvent);
+            session.RegisteredEventIds.Remove(selectedEvent.Id);
+            await UserSessionService.SetCurrentSessionAsync(session);
+
+            // Close the modal
+            CloseUnregisterModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error unregistering from event");
+            errorMessage = "An error occurred while unregistering from the event.";
+        }
+    }
+} 

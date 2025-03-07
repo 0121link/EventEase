@@ -1,0 +1,74 @@
+@page "/event/{Id:int}"
+@using EventEase.Models
+@using EventEase.Services
+@inject EventService EventService
+@inject NavigationManager NavigationManager
+@inject ILogger<EventDetails> Logger
+
+<h3>Event Details</h3>
+
+@if (evt == null)
+{
+    <p>Loading event details...</p>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">
+        @errorMessage
+    </div>
+    <button class="btn btn-secondary" @onclick="NavigateToEvents">Back to Events</button>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title">@evt.Name</h4>
+            <div class="card-text">
+                <p><strong>Date:</strong> @evt.Date.ToShortDateString()</p>
+                <p><strong>Location:</strong> @evt.Location</p>
+                <p><strong>Price:</strong> @evt.Price.ToString("C")</p>
+                <p><strong>Available Spots:</strong> @evt.AvailableSpots</p>
+                <p><strong>Description:</strong> @evt.Description</p>
+            </div>
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-secondary" @onclick="NavigateToEvents">Back to Events</button>
+                <NavLink class="btn btn-success" href="@($"/event/{evt.Id}/register")">
+                    Register for this Event
+                </NavLink>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Event evt;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            evt = await EventService.GetEventByIdAsync(Id);
+        }
+        catch (EventNotFoundException ex)
+        {
+            Logger.LogWarning(ex, "Event not found: {EventId}", Id);
+            errorMessage = $"Event with ID {Id} was not found.";
+            evt = null;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading event details: {EventId}", Id);
+            errorMessage = "An error occurred while loading the event details.";
+            evt = null;
+        }
+    }
+
+    private void NavigateToEvents()
+    {
+        NavigationManager.NavigateTo("/events");
+    }
+} 

@@ -1,0 +1,83 @@
+.navbar[b-z2ef545u2c] {
+    padding: 1rem;
+    color: white;
+}
+
+.navbar-brand[b-z2ef545u2c] {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 1rem;
+    text-decoration: none;
+}
+
+.navbar-toggler[b-z2ef545u2c] {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.navbar-toggler-icon[b-z2ef545u2c] {
+    display: inline-block;
+    width: 1.5em;
+    height: 1.5em;
+    vertical-align: middle;
+    background: no-repeat center center;
+    background-size: 100% 100%;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.55%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+.nav-menu-collapsed[b-z2ef545u2c] {
+    display: none;
+}
+
+.nav-menu-expanded[b-z2ef545u2c] {
+    display: block;
+}
+
+.nav-item[b-z2ef545u2c] {
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+}
+
+.nav-link[b-z2ef545u2c] {
+    color: #d7d7d7;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.nav-link:hover[b-z2ef545u2c] {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.nav-link.active[b-z2ef545u2c] {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: white;
+}
+
+.oi[b-z2ef545u2c] {
+    width: 2rem;
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+    top: -2px;
+}
+
+/* Fixed media query to ensure correct display on different screen sizes */
+@media (min-width: 641px) {
+    .navbar-toggler[b-z2ef545u2c] {
+        display: none;
+    }
+
+    /* Show navigation regardless of collapsed state on larger screens */
+    .nav-menu-collapsed[b-z2ef545u2c],
+    .nav-menu-expanded[b-z2ef545u2c] {
+        display: block !important;
+    }
+}

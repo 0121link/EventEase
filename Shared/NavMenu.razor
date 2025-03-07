@@ -1,0 +1,62 @@
+@using Microsoft.AspNetCore.Components.Web
+@namespace EventEase.Shared
+@inject NavigationManager NavigationManager
+@inject ILogger<NavMenu> Logger
+
+<div class="navbar">
+    <div class="navbar-brand">EventEase</div>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <nav class="@NavMenuCssClass">
+        <div class="nav-item">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="/events">
+                <span class="oi oi-list" aria-hidden="true"></span> Events
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="/my-attendance">
+                <span class="oi oi-calendar" aria-hidden="true"></span> My Attendance
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="/create-event">
+                <span class="oi oi-plus" aria-hidden="true"></span> Create Event
+            </NavLink>
+        </div>
+        <div class="nav-item">
+            <NavLink class="nav-link" href="/test">
+                <span class="oi oi-wrench" aria-hidden="true"></span> Test Scenarios
+            </NavLink>
+        </div>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "nav-menu-collapsed" : "nav-menu-expanded";
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private void NavigateToMyAttendance()
+    {
+        Logger.LogInformation("Navigating to My Attendance page");
+        NavigationManager.NavigateTo("my-attendance");
+    }
+
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("NavMenu initialized");
+        base.OnInitialized();
+    }
+}

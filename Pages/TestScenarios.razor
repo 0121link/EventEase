@@ -1,0 +1,193 @@
+@page "/test"
+@using EventEase.Services
+@using EventEase.Models
+@using Blazored.LocalStorage
+@inject TestEventService TestService
+@inject ILocalStorageService LocalStorage
+
+<PageTitle>EventEase - Test Scenarios</PageTitle>
+
+<div class="container mt-4">
+    <h1>Test Scenarios</h1>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary" @onclick="() => TestScenario(TestEventService.TestScenario.ValidData)">
+                    Valid Data
+                </button>
+                <button class="btn btn-outline-primary" @onclick="() => TestScenario(TestEventService.TestScenario.EmptyData)">
+                    Empty Data
+                </button>
+                <button class="btn btn-outline-primary" @onclick="() => TestScenario(TestEventService.TestScenario.InvalidData)">
+                    Invalid Data
+                </button>
+                <button class="btn btn-outline-primary" @onclick="() => TestScenario(TestEventService.TestScenario.NullData)">
+                    Null Data
+                </button>
+                <button class="btn btn-outline-primary" @onclick="() => TestScenario(TestEventService.TestScenario.LargeDataset)">
+                    Large Dataset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info">
+            <p>Current Scenario: @_currentScenario</p>
+            <p>Load Time: @_loadTime.ToString("F2") ms</p>
+            <p>Memory Usage: @_memoryUsage.ToString("F2") MB</p>
+            @if (_currentScenario == "LargeDataset")
+            {
+                <p>Number of Events: @(_events?.Count ?? 0)</p>
+                <p>Average Event Size: @(_events?.Count > 0 ? (_memoryUsage / _events.Count).ToString("F2") : "0") KB per event</p>
+            }
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Scenario Description</h5>
+                @switch (_currentScenario)
+                {
+                    case "ValidData":
+                        <p class="card-text">
+                            This scenario tests the application with valid event data. It includes three sample events with proper values for all fields:
+                            <ul>
+                                <li>Tech Conference 2024 (June 15, 2024)</li>
+                                <li>Summer Music Festival (July 20, 2024)</li>
+                                <li>Business Networking Dinner (August 5, 2024)</li>
+                            </ul>
+                            This represents the normal operation of the application.
+                        </p>
+                        break;
+
+                    case "EmptyData":
+                        <p class="card-text">
+                            This scenario tests how the application handles an empty list of events. It verifies that:
+                            <ul>
+                                <li>The UI properly displays an empty state message</li>
+                                <li>No event cards are rendered</li>
+                                <li>The application remains responsive</li>
+                            </ul>
+                        </p>
+                        break;
+
+                    case "InvalidData":
+                        <p class="card-text">
+                            This scenario tests data validation with an event containing invalid values:
+                            <ul>
+                                <li>Empty name (violates Required attribute)</li>
+                                <li>Minimal date (violates Date validation)</li>
+                                <li>Null location (violates Required attribute)</li>
+                                <li>Negative price (violates Range attribute)</li>
+                                <li>Zero available spots (violates Range attribute)</li>
+                            </ul>
+                            This verifies that the validation system properly catches and handles invalid data.
+                        </p>
+                        break;
+
+                    case "NullData":
+                        <p class="card-text">
+                            This scenario tests how the application handles null data. It verifies that:
+                            <ul>
+                                <li>The application doesn't crash when receiving null data</li>
+                                <li>Appropriate error messages are displayed</li>
+                                <li>The UI gracefully handles the null state</li>
+                            </ul>
+                        </p>
+                        break;
+
+                    case "LargeDataset":
+                        <p class="card-text">
+                            This scenario tests performance with a large dataset of 1000 events. It verifies:
+                            <ul>
+                                <li>Virtualization performance with many items</li>
+                                <li>Memory usage with large datasets</li>
+                                <li>UI responsiveness with many rendered components</li>
+                            </ul>
+                            The load time and memory usage metrics help assess performance. The average event size calculation helps understand memory efficiency.
+                        </p>
+                        break;
+                }
+            </div>
+        </div>
+
+        @if (_events != null && _events.Any())
+        {
+            <div class="row">
+                <Virtualize Items="_events" Context="evt">
+                    <div class="col-md-4 mb-4">
+                        <ErrorBoundary @ref="_errorBoundary">
+                            <ChildContent>
+                                <EventCard Event="evt" />
+                            </ChildContent>
+                            <ErrorContent>
+                                <div class="alert alert-danger">
+                                    <h4 class="alert-heading">Error</h4>
+                                    <p>There was a problem displaying this event. Please try again later.</p>
+                                </div>
+                            </ErrorContent>
+                        </ErrorBoundary>
+                    </div>
+                </Virtualize>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<Event> _events;
+    private ErrorBoundary _errorBoundary;
+    private bool _loading;
+    private string _currentScenario;
+    private double _loadTime;
+    private double _memoryUsage;
+
+    private async Task TestScenario(TestEventService.TestScenario scenario)
+    {
+        _loading = true;
+        _currentScenario = scenario.ToString();
+        StateHasChanged();
+
+        var startTime = DateTime.Now;
+        var startMemory = GC.GetTotalMemory(true);
+
+        try
+        {
+            // Force garbage collection before starting
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            startMemory = GC.GetTotalMemory(true);
+
+            TestService = new TestEventService(LocalStorage, scenario);
+            _events = await TestService.GetEventsAsync();
+
+            // Force garbage collection after loading
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            var endMemory = GC.GetTotalMemory(true);
+
+            _memoryUsage = (endMemory - startMemory) / (1024.0 * 1024.0); // Convert to MB
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in {scenario} scenario: {ex.Message}");
+            _events = new List<Event>();
+        }
+        finally
+        {
+            _loadTime = (DateTime.Now - startTime).TotalMilliseconds;
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+} 
